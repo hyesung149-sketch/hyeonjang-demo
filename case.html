@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>시공사례 | 바른공간 리모델링</title>
+<meta name="description" content="바른공간 리모델링 시공사례 (현장노트 데모)">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="header">
+  <div class="wrap">
+    <a class="logo" href="index.html"><span class="logo-mark">바</span>바른공간 리모델링</a>
+    <nav class="nav" aria-label="주 메뉴">
+      <a href="index.html#cases">시공사례</a><a href="index.html#service">시공 분야</a><a href="index.html#process">진행 순서</a><a href="index.html#review">고객 후기</a><a href="index.html#faq">자주 묻는 질문</a>
+    </nav>
+    <div class="header-right">
+      <a class="header-tel" id="headerTel" href="#"><small>상담 전화</small><b></b></a>
+      <a class="btn btn-dark btn-sm" href="index.html#contact">견적 문의</a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap" id="main"></main>
+
+<footer class="footer"><div class="wrap" id="footer"></div></footer>
+
+<a class="float-kakao" href="#" onclick="return false" aria-label="카카오톡 상담">
+  <svg viewBox="0 0 32 32" aria-hidden="true"><path fill="#191600" d="M16 6C9.9 6 5 9.9 5 14.7c0 3.1 2 5.8 5.1 7.3l-1.1 4.1c-.1.4.3.7.6.5l4.8-3.2c.5.1 1.1.1 1.6.1 6.1 0 11-3.9 11-8.8S22.1 6 16 6z"/></svg>
+</a>
+<nav class="mobile-bar" aria-label="빠른 연락">
+  <a id="mTel" href="#">📞 전화</a><a class="k" href="#" onclick="return false">카카오톡</a><a class="q" href="index.html#contact">무료 견적</a>
+</nav>
+
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="사진 크게 보기"><img alt=""></div>
+
+<script src="data.js"></script>
+<script>
+'use strict';
+const $ = (s) => document.querySelector(s);
+const telHref = 'tel:' + SHOP.phone.replace(/-/g, '');
+$('#headerTel b').textContent = SHOP.phone; $('#headerTel').href = telHref; $('#mTel').href = telHref;
+
+const id = new URLSearchParams(location.search).get('id') || 'c1';
+const c = findCase(id);
+const main = $('#main');
+
+if (!c) {
+  main.innerHTML = '<div style="padding:120px 0"><h1 class="case-title">사례를 찾을 수 없습니다</h1><p style="margin-top:20px"><a class="btn btn-dark" href="index.html#cases">시공사례 목록으로</a></p></div>';
+} else {
+  document.title = `${c.title} | ${SHOP.name}`;
+  document.querySelector('meta[name=description]').content = c.summary;
+
+  const spec = [
+    ['지역', c.area], ['건물', c.type], ['평형', c.size ? c.size + '평' : ''],
+    ['공정', (c.scopes || []).join(', ')], ['공사 기간', c.days ? c.days + '일' : ''],
+    ['주요 자재', (c.materials || []).join(', ')], ['시공일', fmtDate(c.date)],
+  ].filter(([, v]) => v);
+  const process = c.process && c.process.length > 1 ? c.process : null;
+  const photos = c.photos || [];
+  const related = allCases().filter((x) => x.id !== c.id && x.kind === c.kind).slice(0, 3);
+  const more = related.length ? related : allCases().filter((x) => x.id !== c.id).slice(0, 3);
+
+  main.innerHTML = `
+    <nav class="crumb" aria-label="위치"><a href="index.html">홈</a> › <a href="index.html#cases">시공사례</a> › ${esc(SCOPE_LABEL[c.kind] || '시공')}</nav>
+    <h1 class="case-title">${esc(c.title)}</h1>
+    <div class="case-chips">
+      <span class="tag brand">${esc(SCOPE_LABEL[c.kind] || '시공')}</span>
+      ${c.size ? `<span class="tag">${c.size}평</span>` : ''}${c.days ? `<span class="tag">공사 ${c.days}일</span>` : ''}
+      <span class="tag">${fmtDate(c.date)}</span>
+    </div>
+    <img class="case-main-img" src="${coverOf(c)}" alt="${esc(c.title)} 대표 사진">
+
+    <div class="case-body">
+      <article>
+        <p class="summary"><b>공사 요약</b>${esc(c.summary)}</p>
+        <div class="prose">
+          ${process ? `<h2>공사 과정</h2>
+            <div class="timeline">${process.map(([src, label], i) => `<figure><img src="${src}" alt="${esc(label)}" loading="lazy"><figcaption><b>${i + 1}</b>${esc(label)}</figcaption></figure>`).join('')}</div>` : ''}
+          ${photos.length > 1 ? `<h2>${c.owner ? '현장 사진' : '완공 사진'}</h2>
+            <div class="gallery">${photos.slice(1).map((p, i) => `<img src="${p}" alt="${esc(c.title)} 사진 ${i + 2}" loading="lazy">`).join('')}</div>` : ''}
+          ${(c.story || []).length ? `<h2>공사 내용</h2>${c.story.map((p) => `<p>${esc(p)}</p>`).join('')}` : ''}
+          ${(c.faq || []).length ? `<h2>이 공사에 대해 자주 묻는 질문</h2>
+            <div class="faq-list">${c.faq.map((f) => `<details class="faq" open><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join('')}</div>` : ''}
+        </div>
+      </article>
+      <aside class="spec">
+        <div class="spec-card">
+          <h3>공사 정보</h3>
+          <dl>${spec.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>
+          <a class="btn btn-dark btn-block" href="index.html#contact">비슷한 공사 견적 받기</a>
+          <a class="btn btn-gray btn-block" href="${telHref}">📞 ${esc(SHOP.phone)}</a>
+        </div>
+      </aside>
+    </div>
+
+    <section class="related">
+      <div class="sec-head"><div><h2 style="font-size:24px">${related.length ? '같은 공정의 다른 사례' : '다른 시공사례'}</h2></div>
+        <a class="btn btn-line btn-sm" href="index.html#cases">전체 사례 보기</a></div>
+      <div class="case-grid">${more.map((r) => `
+        <a class="case-card" href="case.html?id=${encodeURIComponent(r.id)}">
+          <div class="case-thumb"><img src="${coverOf(r)}" alt="${esc(r.title)}" loading="lazy"></div>
+          <div class="case-tags"><span class="tag brand">${esc(SCOPE_LABEL[r.kind] || '시공')}</span>${r.days ? `<span class="tag">공사 ${r.days}일</span>` : ''}</div>
+          <h3>${esc(r.title)}</h3>
+          <p class="case-meta">${esc(r.area || '')}</p>
+        </a>`).join('')}</div>
+    </section>`;
+}
+
+$('#footer').innerHTML = `<div class="logo"><span class="logo-mark">바</span>바른공간 리모델링</div>
+  <p>상호 ${esc(SHOP.name)} · 대표 ${esc(SHOP.ceo)} · 사업자등록번호 ${esc(SHOP.bizno)}<br>주소 ${esc(SHOP.address)} · 전화 ${esc(SHOP.phone)}</p>
+  <p style="margin-top:12px">현장노트 데모용 가상 업체입니다. 사진은 Unsplash 무료 사진이며 실제 시공 사진이 아닙니다.</p>`;
+
+/* 사진 크게 보기 */
+const lb = $('#lightbox'), lbImg = lb.querySelector('img');
+main.addEventListener('click', (e) => {
+  const img = e.target.closest('.gallery img, .timeline img, .case-main-img');
+  if (!img) return;
+  lbImg.src = img.src; lbImg.alt = img.alt;
+  lb.classList.add('open');
+});
+const closeLb = () => lb.classList.remove('open');
+lb.addEventListener('click', closeLb);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLb(); });
+
+mountDemoNav(1);
+</script>
+</body>
+</html>

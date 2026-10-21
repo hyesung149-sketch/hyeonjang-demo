@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>월간 리포트 | 현장노트 데모</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="report-page">
+
+<article class="report">
+  <header class="report-head">
+    <div class="report-from"><span class="logo-mark">현</span>현장노트 월간 리포트 · 2026년 10월 1일 발송</div>
+    <h1>바른공간 리모델링 사장님,<br>9월 홈페이지 성과입니다</h1>
+    <p>이번 달 홈페이지로 견적 문의 <b>7건</b>이 들어왔고, 그중 <b>2건</b>을 계약됨으로 표시하셨어요. (수치는 데모용 예시입니다)</p>
+  </header>
+
+  <div class="report-body">
+    <h2>한눈에 보기</h2>
+    <div class="tiles">
+      <div class="tile main"><div class="label">견적 문의</div><div class="value">7<small>건</small></div><div class="delta">8월 5건 → +2건</div></div>
+      <div class="tile"><div class="label">계약됨 표시</div><div class="value">2<small>건</small></div><div class="delta">사장님 입력 기준</div></div>
+      <div class="tile"><div class="label">방문자</div><div class="value">1,284</div><div class="delta">8월보다 18% 증가</div></div>
+      <div class="tile"><div class="label">새 시공사례</div><div class="value">4<small>건</small></div><div class="delta">누적 26건</div></div>
+    </div>
+
+    <h2 id="chartTitle">월별 홈페이지 방문 수</h2>
+    <div class="chart" id="chart"></div>
+    <details style="margin-top:10px"><summary style="cursor:pointer;font-size:13px;color:var(--g500)">표로 보기</summary>
+      <table class="plain" id="chartTable" style="margin-top:8px"><thead><tr><th>월</th><th class="num">방문 수</th></tr></thead><tbody></tbody></table>
+    </details>
+
+    <h2>이번 달 문의</h2>
+    <table class="plain">
+      <thead><tr><th>날짜</th><th>지역</th><th>공사</th><th>결과</th></tr></thead>
+      <tbody>
+        <tr><td>9.27</td><td>분당구 수내동</td><td>욕실</td><td><span class="st won">✅ 계약됨</span></td></tr>
+        <tr><td>9.22</td><td>수지구 상현동</td><td>주방, 도배·바닥</td><td><span class="st talk">📞 상담함</span></td></tr>
+        <tr><td>9.18</td><td>분당구 서현동</td><td>샷시</td><td><span class="st won">✅ 계약됨</span></td></tr>
+        <tr><td>9.15</td><td>성남시 중원구</td><td>욕실</td><td><span class="st lost">✕ 안 됨</span></td></tr>
+        <tr><td>9.11</td><td>분당구 정자동</td><td>전체 리모델링</td><td><span class="st talk">📞 상담함</span></td></tr>
+        <tr><td>9.06</td><td>용인시 기흥구</td><td>욕실</td><td><span class="st lost">✕ 안 됨</span></td></tr>
+        <tr><td>9.02</td><td>분당구 구미동</td><td>주방</td><td><span class="st new">● 결과 미입력</span></td></tr>
+      </tbody>
+    </table>
+
+    <h2>많이 본 시공사례</h2>
+    <table class="plain">
+      <thead><tr><th>사례</th><th class="num">조회</th></tr></thead>
+      <tbody id="topCases"></tbody>
+    </table>
+
+    <h2>어떤 검색어로 들어왔나요</h2>
+    <table class="plain">
+      <thead><tr><th>검색어 (네이버·구글)</th><th class="num">유입</th></tr></thead>
+      <tbody>
+        <tr><td>분당 욕실 리모델링</td><td class="num">142</td></tr>
+        <tr><td>정자동 욕실 공사 기간</td><td class="num">61</td></tr>
+        <tr><td>바른공간 리모델링</td><td class="num">58</td></tr>
+        <tr><td>수지 주방 리모델링 11자</td><td class="num">37</td></tr>
+      </tbody>
+    </table>
+
+    <h2>다음 달 추천</h2>
+    <div class="next">
+      <ol>
+        <li>욕실 사례는 많은데 <b>샷시 사례가 1건</b>뿐이에요. 샷시 문의가 늘고 있으니 다음 샷시 공사 때 사진을 꼭 올려 주세요.</li>
+        <li><b>결과 미입력 문의가 1건</b> 있어요. 알림톡의 버튼으로 결과를 눌러 주시면 리포트가 정확해집니다.</li>
+        <li>수지구 상현동 문의가 2건이었어요. <b>상현동 사례</b>가 생기면 지역 페이지를 만들어 드릴게요.</li>
+      </ol>
+    </div>
+  </div>
+
+  <footer class="report-foot">
+    <span>스탠다드 플랜 · 9월 이용료 69,000원 (VAT 별도)</span>
+    <strong>홈페이지 문의 7건 · 계약 2건</strong>
+  </footer>
+</article>
+
+<script src="data.js"></script>
+<script>
+'use strict';
+/* 월별 방문 수: 한 계열이라 범례 없이 제목으로 이름을 붙이고, 마지막 막대에만 값을 직접 표시 */
+const DATA = [['4월', 312], ['5월', 498], ['6월', 640], ['7월', 811], ['8월', 1087], ['9월', 1284]];
+const fmt = (n) => n.toLocaleString('ko-KR');
+document.querySelector('#chartTable tbody').innerHTML = DATA.map(([m, v]) => `<tr><td>${m}</td><td class="num">${fmt(v)}</td></tr>`).join('');
+
+(function drawChart() {
+  const W = 760, H = 240, padL = 44, padR = 8, padT = 26, padB = 30;
+  const max = 1500, ticks = [0, 500, 1000, 1500];
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const slot = plotW / DATA.length, barW = Math.min(52, slot * 0.5);
+  const y = (v) => padT + plotH - (v / max) * plotH;
+  const css = getComputedStyle(document.documentElement);
+  const bar = css.getPropertyValue('--brand').trim(), ink = css.getPropertyValue('--g900').trim(), muted = css.getPropertyValue('--g500').trim(), line = css.getPropertyValue('--g200').trim();
+
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-labelledby="chartTitle" aria-describedby="chartDesc"><desc id="chartDesc">4월 312회에서 9월 1,284회로 매달 늘었습니다.</desc>`;
+  ticks.forEach((t) => {
+    s += `<line x1="${padL}" x2="${W - padR}" y1="${y(t)}" y2="${y(t)}" stroke="${line}" stroke-width="1"/>`;
+    s += `<text x="${padL - 10}" y="${y(t) + 4}" text-anchor="end" font-size="12" fill="${muted}">${fmt(t)}</text>`;
+  });
+  DATA.forEach(([m, v], i) => {
+    const cx = padL + slot * i + slot / 2, x = cx - barW / 2, top = y(v), base = y(0), r = 4;
+    s += `<path d="M${x},${base} V${top + r} Q${x},${top} ${x + r},${top} H${x + barW - r} Q${x + barW},${top} ${x + barW},${top + r} V${base} Z" fill="${bar}" data-bar="${i}"/>`;
+    s += `<text x="${cx}" y="${H - 8}" text-anchor="middle" font-size="12" fill="${muted}">${m}</text>`;
+    if (i === DATA.length - 1) s += `<text x="${cx}" y="${top - 9}" text-anchor="middle" font-size="13" font-weight="700" fill="${ink}">${fmt(v)}</text>`;
+    s += `<rect x="${padL + slot * i}" y="${padT}" width="${slot}" height="${plotH}" fill="transparent" data-hit="${i}"/>`;
+  });
+  s += '</svg><div class="tip" id="tip"></div>';
+  const box = document.getElementById('chart');
+  box.innerHTML = s;
+
+  const svg = box.querySelector('svg'), tip = document.getElementById('tip');
+  const bars = [...box.querySelectorAll('[data-bar]')];
+  const show = (i) => {
+    const [m, v] = DATA[i];
+    const scale = svg.getBoundingClientRect().width / W;
+    tip.textContent = `${m} · 방문 ${fmt(v)}회`;
+    tip.style.left = (padL + slot * i + slot / 2) * scale + 'px';
+    tip.style.top = y(v) * scale + 'px';
+    tip.classList.add('show');
+    bars.forEach((b, j) => b.setAttribute('opacity', j === i ? '1' : '.4'));
+  };
+  const hide = () => { tip.classList.remove('show'); bars.forEach((b) => b.setAttribute('opacity', '1')); };
+  box.querySelectorAll('[data-hit]').forEach((h) => {
+    h.addEventListener('mouseenter', () => show(+h.dataset.hit));
+    h.addEventListener('click', () => show(+h.dataset.hit));
+  });
+  svg.addEventListener('mouseleave', hide);
+})();
+
+/* 많이 본 사례 */
+const views = { c1: 412, c2: 238, c4: 176 };
+document.getElementById('topCases').innerHTML = Object.entries(views).map(([id, v]) => {
+  const c = findCase(id);
+  return `<tr><td><div class="case-cell"><img src="${coverOf(c)}" alt=""><a href="case.html?id=${id}">${esc(c.title)}</a></div></td><td class="num">${fmt(v)}</td></tr>`;
+}).join('');
+
+mountDemoNav(3);
+</script>
+</body>
+</html>

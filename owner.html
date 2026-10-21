@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>사장님 앱 | 현장노트 데모</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="app-page">
+
+<div class="wrap app-stage">
+  <div class="app-intro">
+    <span class="area-chip">현장노트 · 사장님 전용 앱</span>
+    <h1>공사가 끝나면<br>사진만 올려 주세요</h1>
+    <p>휴대폰으로 사진 몇 장과 메모 한 줄만 올리시면 됩니다. 시공사례 글은 현장노트가 쓰고, 사장님이 확인하신 뒤에만 홈페이지에 올라갑니다.</p>
+    <ol>
+      <li><div><b>사진과 메모 올리기</b><span>"정자동 32평 욕실 2개, 5일, 포세린 타일" 한 줄이면 충분합니다</span></div></li>
+      <li><div><b>초안 확인 알림톡</b><span>1~2분 뒤 초안이 오고, 직접 고칠 수도 있습니다</span></div></li>
+      <li><div><b>게시 버튼 한 번</b><span>홈페이지 시공사례에 바로 올라가고 검색엔진에 알려집니다</span></div></li>
+    </ol>
+  </div>
+
+  <div class="device">
+    <div class="screen">
+      <div class="island"></div>
+      <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="app-head"><small id="shopName"></small><h2 id="screenTitle">사례 올리기</h2></div>
+      <div class="app-scroll" id="body"></div>
+      <div id="cta"></div>
+      <nav class="tabbar" role="tablist">
+        <button role="tab" aria-selected="true" data-tab="upload">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>올리기</button>
+        <button role="tab" aria-selected="false" data-tab="leads">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/></svg>문의<span class="badge" id="badge"></span></button>
+        <button role="tab" aria-selected="false" data-tab="mine">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7"/><rect x="13" y="4" width="7" height="7"/><rect x="4" y="13" width="7" height="7"/><rect x="13" y="13" width="7" height="7"/></svg>내 사례</button>
+      </nav>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="fileInput" accept="image/*" multiple hidden>
+
+<script src="data.js"></script>
+<script>
+'use strict';
+const $ = (s) => document.querySelector(s);
+const body = $('#body'), cta = $('#cta');
+$('#shopName').textContent = SHOP.name;
+
+const EXAMPLES = [
+  '분당 정자동 OO아파트 32평 욕실 2개 전체, 5일, 600각 포세린 타일, 벽걸이 양변기',
+  '수지 풍덕천동 25평 주방 11자로 변경, 4일, 세라믹 상판',
+  '판교 백현동 34평 전체 도배 강마루, 3일',
+];
+const SAMPLE_PHOTOS = {
+  bath: ['bath-d', 'tile-shower', 'work-tile', 'before-bath-c'],
+  kitchen: ['kitchen-b', 'work-kitchen'],
+  floor: ['living-c', 'work-room'],
+  window: ['window-a', 'dining'],
+};
+const LEADS = [
+  { name: '이○○', area: '분당구 수내동', size: '29평', scope: '욕실', budget: '500~1,000만 원', when: '1개월 이내', st: 'new', ago: '12분 전' },
+  { name: '최○○', area: '수지구 상현동', size: '33평', scope: '주방, 도배·바닥', budget: '1,000~2,000만 원', when: '1~3개월', st: 'talk', ago: '어제' },
+  { name: '정○○', area: '분당구 서현동', size: '24평', scope: '샷시', budget: '선택 안 함', when: '1개월 이내', st: 'won', ago: '3일 전' },
+];
+const ST = { new: '● 새 문의', talk: '📞 상담함', won: '✅ 계약됨', lost: '✕ 안 됨' };
+
+let photos = [];
+let draft = null;
+let tab = 'upload';
+
+document.querySelector('.tabbar').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-tab]');
+  if (!b) return;
+  tab = b.dataset.tab;
+  document.querySelectorAll('.tabbar button').forEach((x) => x.setAttribute('aria-selected', x === b));
+  render();
+});
+function render() {
+  const n = LEADS.filter((l) => l.st === 'new').length;
+  $('#badge').textContent = n || '';
+  $('#badge').style.display = n ? '' : 'none';
+  body.scrollTop = 0;
+  if (tab === 'upload') { $('#screenTitle').textContent = '사례 올리기'; draft ? renderDraft() : renderUpload(); }
+  else if (tab === 'leads') { $('#screenTitle').textContent = '견적 문의'; cta.innerHTML = ''; renderLeads(); }
+  else { $('#screenTitle').textContent = '내 사례'; cta.innerHTML = ''; renderMine(); }
+}
+
+/* ── 1) 사진 + 메모 ── */
+function renderUpload() {
+  body.innerHTML = `
+    <div class="card">
+      <div class="card-title"><span>시공 사진</span><span>${photos.length ? photos.length + '/10장' : '4~10장 권장'}</span></div>
+      ${photos.length
+        ? `<div class="thumbs">${photos.map((p) => `<img src="${p}" alt="올린 사진">`).join('')}${photos.length < 10 ? '<button type="button" class="more" id="addMore" aria-label="사진 더 올리기">+</button>' : ''}</div>`
+        : `<button type="button" class="add-photo" id="addPhoto" style="width:100%">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+            <b>사진 선택</b><span style="font-size:12px;color:var(--g500)">위치정보는 지우고 크기는 줄여서 올립니다</span>
+          </button>`}
+      <p style="margin-top:10px;font-size:12px;color:var(--g500)">${photos.length ? '<button type="button" class="link-btn" id="clearPhotos">사진 모두 지우기</button>' : '사진이 없으면 <button type="button" class="link-btn" id="useSample">예시 사진으로 해보기</button>'}</p>
+    </div>
+    <div class="card">
+      <div class="card-title"><span>메모 한 줄</span><span>지역·평형·공정·기간·자재</span></div>
+      <label class="sr-only" for="memo">시공 메모</label>
+      <textarea id="memo" placeholder="예: 정자동 32평 욕실 2개 전체, 5일, 600각 포세린 타일"></textarea>
+      <div class="ex-row">${EXAMPLES.map((x, i) => `<button type="button" data-ex="${i}" title="${esc(x)}">${esc(x)}</button>`).join('')}</div>
+    </div>`;
+  cta.innerHTML = `<div class="app-cta"><p class="app-err" id="err" role="alert"></p><button class="btn btn-dark" id="go" type="button">초안 만들기</button></div>`;
+
+  const memo = $('#memo');
+  memo.value = sessionStorage.getItem('hn_memo') || '';
+  memo.addEventListener('input', () => sessionStorage.setItem('hn_memo', memo.value));
+  const pick = () => $('#fileInput').click();
+  ($('#addPhoto') || {}).onclick = pick;
+  ($('#addMore') || {}).onclick = pick;
+  ($('#clearPhotos') || {}).onclick = () => { photos = []; renderUpload(); };
+  ($('#useSample') || {}).onclick = () => {
+    const k = parseMemo(memo.value).kind;
+    photos = SAMPLE_PHOTOS[k].map(IMG);
+    renderUpload();
+  };
+  body.querySelector('.ex-row').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-ex]');
+    if (!b) return;
+    memo.value = EXAMPLES[b.dataset.ex];
+    sessionStorage.setItem('hn_memo', memo.value);
+  });
+  $('#go').onclick = () => {
+    if (!memo.value.trim()) { $('#err').textContent = '메모를 한 줄 적어 주세요. 아래 예시를 눌러도 됩니다.'; return; }
+    if (!photos.length) { $('#err').textContent = '사진을 올리거나 "예시 사진으로 해보기"를 눌러 주세요.'; return; }
+    makeDraft(memo.value.trim());
+  };
+}
+
+$('#fileInput').addEventListener('change', async (e) => {
+  const files = [...e.target.files].slice(0, 10);
+  e.target.value = '';
+  const out = [];
+  for (const f of files) { try { out.push(await shrink(f)); } catch { /* 읽을 수 없는 파일은 건너뜀 */ } }
+  photos = [...photos.filter((p) => p.startsWith('data:')), ...out].slice(0, 10);
+  renderUpload();
+});
+
+/* 사진을 다시 그려 저장: 크기가 줄고, 위치정보(EXIF)는 다시 그리는 과정에서 사라짐 */
+function shrink(file, max = 1200, q = 0.78) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const r = Math.min(1, max / Math.max(img.width, img.height));
+      const cv = document.createElement('canvas');
+      cv.width = Math.round(img.width * r); cv.height = Math.round(img.height * r);
+      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+      URL.revokeObjectURL(url);
+      resolve(cv.toDataURL('image/jpeg', q));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('이미지를 읽지 못함')); };
+    img.src = url;
+  });
+}
+
+/* ── 메모 정리 (데모용 규칙). 실제 서비스에서는 AI가 사진과 메모를 함께 보고 씁니다. ── */
+function parseMemo(memo) {
+  const parts = memo.split(/[,，\n]/).map((s) => s.trim()).filter(Boolean);
+  const first = parts[0] || '';
+  const kinds = [['bath', /욕실|화장실/], ['kitchen', /주방|싱크/], ['window', /샷시|창호/], ['floor', /도배|바닥|마루|장판/]];
+  const kindHit = kinds.find(([, re]) => re.test(memo));
+  const kind = kindHit ? kindHit[0] : 'bath';
+  const size = (memo.match(/(\d{2,3})\s*평/) || [])[1];
+  const days = (memo.match(/(\d{1,2})\s*일(?!\s*자)/) || [])[1];
+  const typeM = memo.match(/아파트|빌라|단독주택|주택|오피스텔|상가|사무실/);
+  const known = ['분당', '판교', '수지', '광교', '기흥', '용인', '성남', '수원', '서울'];
+  const areaTokens = first.split(/\s+/).filter((t) => known.includes(t) || /^[가-힣]{1,6}(동|구|시|읍|면)$/.test(t));
+  let scope = '';
+  if (kindHit) {
+    const m = first.match(new RegExp(`(${kindHit[1].source}).*$`));
+    scope = m ? m[0].replace(/\d{1,2}\s*일.*$/, '').trim() : '';
+  }
+  if (!scope) scope = SCOPE_LABEL[kind];
+  const materials = parts.slice(1).filter((p) => !/^\d{1,2}\s*일$/.test(p) && !/^\d{2,3}\s*평$/.test(p));
+  return { kind, size: size ? Number(size) : null, days: days ? Number(days) : null, type: typeM ? (typeM[0] === '주택' ? '단독주택' : typeM[0]) : '', area: areaTokens.join(' '), scope, materials };
+}
+
+function makeDraft(memo) {
+  const p = parseMemo(memo);
+  const place = p.area.split(' ').slice(-1)[0] || '';
+  const title = [place, p.size ? p.size + '평' : '', p.type, p.scope].filter(Boolean).join(' ');
+  const where = [p.area, p.size ? p.size + '평' : '', p.type].filter(Boolean).join(' ');
+  const summary = `${where ? where + '의 ' : ''}${p.scope} 공사를${p.days ? ` ${p.days}일 동안` : ''} 진행했습니다.${p.materials.length ? ` 주요 자재는 ${p.materials.join(', ')}입니다.` : ''}`;
+  draft = {
+    id: 'u' + Date.now().toString(36), owner: true, kind: p.kind, date: new Date().toISOString().slice(0, 10),
+    title, area: p.area, type: p.type, size: p.size, days: p.days, scopes: [p.scope], materials: p.materials,
+    summary, story: [], faq: [], photos: photos.slice(), memo,
+  };
+  runProgress();
+}
+
+function runProgress() {
+  cta.innerHTML = '';
+  const steps = [`사진 ${photos.length}장 정리`, '위치정보(GPS) 지우기', '사진 크기 줄이기', '시공사례 글 쓰기', '확인용 초안 만들기'];
+  body.innerHTML = `<div class="working"><div class="ring"></div><b>초안을 만들고 있어요</b><ul id="prog">${steps.map((s) => `<li>${s}</li>`).join('')}</ul></div>`;
+  const lis = [...document.querySelectorAll('#prog li')];
+  let i = 0;
+  const tick = () => {
+    if (i > 0) lis[i - 1].className = 'done';
+    if (i < lis.length) { lis[i].className = 'doing'; i++; setTimeout(tick, 520); }
+    else setTimeout(renderDraft, 350);
+  };
+  tick();
+}
+
+/* ── 2) 초안 확인 → 게시 ── */
+function renderDraft(editing = false) {
+  const d = draft;
+  const val = (v, unit = '') => v ? esc(v) + unit : '<span class="empty">메모에 없어 비워 둠</span>';
+  body.innerHTML = `
+    <div class="toast"><i>💬</i><div><b>현장노트 · 알림톡</b>시공사례 초안이 준비됐어요. 사장님이 게시를 눌러야 홈페이지에 올라갑니다.</div></div>
+    <div class="draft">
+      <img class="draft-cover" src="${d.photos[0]}" alt="대표 사진">
+      <div class="draft-body">
+        <span class="tag">${esc(SCOPE_LABEL[d.kind])} · 사진 ${d.photos.length}장</span>
+        ${editing
+          ? `<label class="sr-only" for="eTitle">제목</label><input id="eTitle" value="${esc(d.title)}">
+             <label class="sr-only" for="eSum">요약</label><textarea id="eSum">${esc(d.summary)}</textarea>`
+          : `<h3>${esc(d.title)}</h3><p>${esc(d.summary)}</p>`}
+        <dl>
+          <div><dt>지역</dt><dd>${val(d.area)}</dd></div>
+          <div><dt>건물</dt><dd>${val(d.type)}</dd></div>
+          <div><dt>평형</dt><dd>${val(d.size, '평')}</dd></div>
+          <div><dt>기간</dt><dd>${val(d.days, '일')}</dd></div>
+          <div><dt>자재</dt><dd>${val(d.materials.join(', '))}</dd></div>
+        </dl>
+      </div>
+    </div>
+    <p class="fineprint">데모에서는 메모를 정해진 규칙으로 정리합니다. 실제 서비스에서는 AI가 사진까지 보고 공사 과정을 더 자세히 씁니다. <b>메모에 없는 가격·브랜드·기간은 지어내지 않고 비워 둡니다.</b></p>
+    <button type="button" class="link-btn" id="discard" style="display:block;margin:0 auto 8px;color:var(--g500)">초안 버리고 처음부터</button>`;
+  cta.innerHTML = `<div class="app-cta"><div class="two-btn">${editing
+    ? '<button class="btn btn-soft" id="cancelEdit" type="button">취소</button><button class="btn btn-dark" id="saveEdit" type="button">저장</button>'
+    : '<button class="btn btn-soft" id="edit" type="button">직접 고치기</button><button class="btn btn-dark" id="publish" type="button">게시하기</button>'}</div></div>`;
+
+  if (editing) {
+    $('#cancelEdit').onclick = () => renderDraft(false);
+    $('#saveEdit').onclick = () => {
+      draft.title = $('#eTitle').value.trim() || draft.title;
+      draft.summary = $('#eSum').value.trim() || draft.summary;
+      renderDraft(false);
+    };
+  } else {
+    $('#edit').onclick = () => renderDraft(true);
+    $('#publish').onclick = publish;
+  }
+  $('#discard').onclick = () => { draft = null; photos = []; renderUpload(); };
+}
+
+function publish() {
+  const list = loadOwnerCases();
+  list.unshift(draft);
+  let ok = saveOwnerCases(list);
+  while (!ok && list.length > 1) { list.pop(); ok = saveOwnerCases(list); }   // 저장 공간이 부족하면 오래된 데모 사례부터 지움
+  const saved = draft;
+  draft = null; photos = [];
+  sessionStorage.removeItem('hn_memo');
+  cta.innerHTML = '';
+  body.innerHTML = `
+    <div class="done-view">
+      <div class="check">✓</div>
+      <h3>홈페이지에 올라갔어요</h3>
+      <p>${esc(saved.title)}</p>
+      ${ok ? '' : '<p class="fineprint">이 브라우저의 저장 공간이 부족해 사례를 저장하지 못했습니다. 사진 수를 줄여 다시 해 보세요.</p>'}
+      <a class="btn btn-dark" href="case.html?id=${encodeURIComponent(saved.id)}">게시된 사례 보기</a>
+      <a class="btn btn-soft" href="index.html#portfolio">홈페이지에서 보기</a>
+      <button class="btn btn-soft" type="button" id="again">사례 하나 더 올리기</button>
+      <p class="fineprint">실제 서비스에서는 이 순간 사이트맵이 갱신되어 네이버·구글에 새 페이지가 알려집니다.</p>
+    </div>`;
+  $('#again').onclick = render;
+}
+
+/* ── 문의 탭 ── */
+function renderLeads() {
+  body.innerHTML = `<p class="fineprint" style="margin-top:0">결과를 눌러 두면 월간 리포트에 계약 수로 집계됩니다.</p>
+    ${LEADS.map((l, i) => `
+      <div class="lead">
+        <div class="lead-top"><b>${esc(l.name)} · ${esc(l.area)}</b><span class="st ${l.st}">${ST[l.st]}</span></div>
+        <small>${esc(l.size)} · ${esc(l.scope)} · ${esc(l.budget)} · ${esc(l.when)} · ${l.ago}</small>
+        <div class="seg">${['talk', 'won', 'lost'].map((s) => `<button type="button" data-i="${i}" data-s="${s}" aria-pressed="${l.st === s}">${ST[s]}</button>`).join('')}</div>
+      </div>`).join('')}`;
+}
+body.addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-s]');
+  if (!b || tab !== 'leads') return;
+  LEADS[b.dataset.i].st = b.dataset.s;
+  render();
+});
+
+/* ── 내 사례 탭 ── */
+function renderMine() {
+  const mine = loadOwnerCases();
+  body.innerHTML = `<p class="fineprint" style="margin-top:0">홈페이지에 공개된 사례 ${allCases().length}건</p>
+    ${allCases().map((c) => `
+      <a class="mine-item" href="case.html?id=${encodeURIComponent(c.id)}">
+        <img src="${coverOf(c)}" alt="">
+        <div><b>${esc(c.title)}</b><small>${fmtDate(c.date)}${c.owner ? ' · 방금 올림' : ''}</small></div>
+      </a>`).join('')}
+    ${mine.length ? '<button class="btn btn-soft btn-block" id="reset" type="button" style="border-radius:14px;margin-top:8px">데모에서 올린 사례 모두 지우기</button>' : ''}`;
+  const r = $('#reset');
+  if (r) r.onclick = () => { saveOwnerCases([]); renderMine(); };
+}
+
+/* owner.html?auto=draft : 예시 메모와 예시 사진으로 초안 화면을 바로 엽니다 (영업 시연·캡처용) */
+render();
+if (new URLSearchParams(location.search).get('auto') === 'draft') {
+  photos = SAMPLE_PHOTOS.bath.map(IMG);
+  makeDraft(EXAMPLES[0]);
+}
+mountDemoNav(2);
+</script>
+</body>
+</html>
